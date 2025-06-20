@@ -1,0 +1,29 @@
+from app import app, db
+from models import Item
+import pytest
+
+@pytest.fixture
+def test_client():
+    with app.app_context():
+        db.create_all()
+        # Seed the database with a test item
+        item = Item(name='Test Item', price=9.99)
+        db.session.add(item)
+        db.session.commit()
+        yield app.test_client()
+        db.session.remove()
+        db.drop_all()
+
+def test_get_items(test_client):
+    response = test_client.get('/items')
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert isinstance(data, list)
+    assert len(data) > 0  # Ensure at least one item exists
+
+    item = data[0]
+    assert 'id' in item
+    assert 'name' in item
+    assert 'price' in item
+    assert item['name'] == 'Test Item'
